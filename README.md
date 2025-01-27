@@ -1,5 +1,5 @@
 # Tetris
-Um jogo simples de Tetris
+Um jogo simples de Tetris contido em um arquivo `html`.
 
 ## Como jogar:
 
