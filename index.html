@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tetris</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #2c3e50;
+            font-family: Arial, sans-serif;
+            color: #ecf0f1;
+        }
+        #game {
+            display: grid;
+            grid-template-columns: repeat(10, 20px);
+            grid-template-rows: repeat(20, 20px);
+            gap: 1px;
+            background-color: #34495e;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        .cell {
+            width: 20px;
+            height: 20px;
+            background-color: #2c3e50;
+            border-radius: 2px;
+        }
+        #score {
+            margin-top: 20px;
+            font-size: 24px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <div id="game"></div>
+        <div id="score">Placar: 0</div>
+    </div>
+
+    <script>
+        const game = document.getElementById('game');
+        const scoreElement = document.getElementById('score');
+        let score = 0;
+        let grid = Array.from({ length: 20 }, () => Array(10).fill(0));
+        const colors = ['#1abc9c', '#3498db', '#9b59b6', '#e74c3c', '#f1c40f', '#e67e22', '#2ecc71'];
+
+        const pieces = [
+            [[1, 1, 1, 1]], // I
+            [[1, 1], [1, 1]], // O
+            [[0, 1, 0], [1, 1, 1]], // T
+            [[1, 1, 0], [0, 1, 1]], // S
+            [[0, 1, 1], [1, 1, 0]], // Z
+            [[1, 0, 0], [1, 1, 1]], // L
+            [[0, 0, 1], [1, 1, 1]]  // J
+        ];
+
+        let currentPiece;
+        let currentColor;
+        let currentPosition;
+
+        function createPiece() {
+            const randomIndex = Math.floor(Math.random() * pieces.length);
+            currentPiece = pieces[randomIndex];
+            currentColor = colors[randomIndex];
+            currentPosition = { x: 4, y: 0 };
+        }
+
+        function draw() {
+            game.innerHTML = '';
+            for (let y = 0; y < 20; y++) {
+                for (let x = 0; x < 10; x++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell');
+                    if (grid[y][x]) {
+                        cell.style.backgroundColor = grid[y][x];
+                    }
+                    game.appendChild(cell);
+                }
+            }
+
+            currentPiece.forEach((row, dy) => {
+                row.forEach((value, dx) => {
+                    if (value) {
+                        const x = currentPosition.x + dx;
+                        const y = currentPosition.y + dy;
+                        if (y >= 0 && y < 20 && x >= 0 && x < 10) {
+                            const cell = document.createElement('div');
+                            cell.classList.add('cell');
+                            cell.style.backgroundColor = currentColor;
+                            game.children[y * 10 + x].replaceWith(cell);
+                        }
+                    }
+                });
+            });
+        }
+
+        function movePiece(dx, dy) {
+            currentPosition.x += dx;
+            currentPosition.y += dy;
+            if (checkCollision()) {
+                currentPosition.x -= dx;
+                currentPosition.y -= dy;
+                if (dy === 1) {
+                    placePiece();
+                    clearLines();
+                    createPiece();
+                    if (checkCollision()) {
+                        alert('Game Over!');
+                        grid = Array.from({ length: 20 }, () => Array(10).fill(0));
+                        score = 0;
+                        scoreElement.textContent = 'Placar: 0';
+                    }
+                }
+                return false;
+            }
+            return true;
+        }
+
+        function checkCollision() {
+            return currentPiece.some((row, dy) => 
+                row.some((value, dx) => {
+                    const x = currentPosition.x + dx;
+                    const y = currentPosition.y + dy;
+                    return value && (y >= 20 || x < 0 || x >= 10 || (y >= 0 && grid[y][x]));
+                })
+            );
+        }
+
+        function placePiece() {
+            currentPiece.forEach((row, dy) => {
+                row.forEach((value, dx) => {
+                    if (value) {
+                        const x = currentPosition.x + dx;
+                        const y = currentPosition.y + dy;
+                        if (y >= 0 && y < 20 && x >= 0 && x < 10) {
+                            grid[y][x] = currentColor;
+                        }
+                    }
+                });
+            });
+        }
+
+        function clearLines() {
+            let linesCleared = 0;
+            for (let y = 19; y >= 0; y--) {
+                if (grid[y].every(cell => cell !== 0)) {
+                    grid.splice(y, 1);
+                    grid.unshift(Array(10).fill(0));
+                    linesCleared++;
+                    y++;
+                }
+            }
+            if (linesCleared > 0) {
+                score += linesCleared * 100;
+                scoreElement.textContent = `Placar: ${score}`;
+            }
+        }
+
+        function rotatePiece() {
+            const rotated = currentPiece[0].map((_, i) => 
+                currentPiece.map(row => row[i]).reverse()
+            );
+            const previousPiece = currentPiece;
+            currentPiece = rotated;
+            if (checkCollision()) {
+                currentPiece = previousPiece;
+            }
+        }
+
+        document.addEventListener('keydown', event => {
+            if (event.key === 'ArrowLeft') movePiece(-1, 0);
+            if (event.key === 'ArrowRight') movePiece(1, 0);
+            if (event.key === 'ArrowDown') movePiece(0, 1);
+            if (event.key === 'ArrowUp') rotatePiece();
+        });
+
+        createPiece();
+        setInterval(() => {
+            movePiece(0, 1);
+            draw();
+        }, 200);
+    </script>
+</body>
+</html>
